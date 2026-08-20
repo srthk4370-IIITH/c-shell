@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Iinclude
 
-OBJECTS = main.o lexer.o parser.o echo.o cmd.o
+OBJECTS = main.o lexer.o parser.o echo.o cmd.o hop.o lower.o
 
 c-shell: $(OBJECTS)
 	$(CC) $(OBJECTS) -o c-shell

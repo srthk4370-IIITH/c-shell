@@ -1,0 +1,138 @@
+#include "include/token.h"
+#include "include/lower.h"
+#include "include/hop.h"
+#include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+#define SIZE 10
+
+int pos = 0;                 // current number of entries
+char *recent[SIZE];          // recent[0] = most recent
+int freq[SIZE];              // frequency of each entry
+int standings[SIZE];         // indices sorted by score
+
+
+void update_standings()
+{
+    for (int i = 0; i < pos; i++)
+        standings[i] = i;
+
+    for (int i = 0; i < pos - 1; i++)
+    {
+        for (int j = i + 1; j < pos; j++)
+        {
+            int score_i = standings[i] + 2 * freq[standings[i]];
+            int score_j = standings[j] + 2 * freq[standings[j]];
+
+            if (score_j > score_i)
+            {
+                int temp = standings[i];
+                standings[i] = standings[j];
+                standings[j] = temp;
+            }
+        }
+    }
+}
+
+
+void update(char *cwd)
+{
+    int old_pos = -1;
+    int old_freq = 0;
+
+    // Check whether cwd already exists
+    for (int i = 0; i < pos; i++)
+    {
+        if (strcmp(recent[i], cwd) == 0)
+        {
+            old_pos = i;
+            old_freq = freq[i];
+            break;
+        }
+    }
+
+    if (old_pos != -1)
+    {
+        for (int i = old_pos; i > 0; i--)
+        {
+            recent[i] = recent[i - 1];
+            freq[i] = freq[i - 1];
+        }
+        recent[0] = cwd;
+        freq[0] = old_freq + 1;
+    }
+    else
+    {
+        // New entry
+        if (pos < SIZE)
+            pos++;
+        else
+            free(recent[SIZE - 1]);
+        for (int i = pos - 1; i > 0; i--)
+        {
+            recent[i] = recent[i - 1];
+            freq[i] = freq[i - 1];
+        }
+
+        recent[0] = cwd;
+        freq[0] = 1;
+    }
+
+    update_standings();
+}
+
+void hop(Token* tokens, int size)
+{
+    for(int x=1; x<size; x++)
+    {
+        char *current = getcwd(NULL, 0);
+        if(strcmp(".", tokens[x].text))
+        {
+            if(!strcmp("-", tokens[x].text))
+            {
+                char* o = getenv("OLDPWD");
+                printf("%s\n", o);
+                if(o != NULL)
+                {
+                    if(chdir(o))
+                    {
+                        printf("hop: No such directory\n");
+                    }
+                    else
+                    {
+                        update(current);
+                        setenv("OLDPWD", current, 1);
+                    }
+                }
+            }
+            else if(!chdir(tokens[x].text))
+            {
+                update(current);
+                setenv("OLDPWD", current, 1);
+            }
+            else
+            {
+                int flag = 0;
+                for(int y=0; y<pos; y++)
+                {
+                    if(strstr(recent[standings[y]], tokens[x].text))
+                    {
+                        if(!chdir(recent[standings[y]]))
+                        {
+                            update(current);
+                            setenv("OLDPWD", current, 1);
+                            flag = 1;
+                            break;
+                        }
+                    }
+                }
+                if(!flag)
+                {
+                    printf("hop: Command not found\n");
+                }
+            }
+        }
+    }
+}
