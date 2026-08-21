@@ -2,6 +2,8 @@
 #include "include/token.h"
 #include "include/lower.h"
 #include "include/hop.h"
+#include "include/reveal.h"
+#include "include/locate.h"
 #include "include/cmd.h"
 #include <unistd.h>
 #include <string.h>
@@ -21,6 +23,14 @@ void cmd(Token* tokens, int size)
         else if(!strcmp("hop", tokens[0].text))
         {
             hop(tokens, size);
+        }
+        else if(!strcmp("reveal", tokens[0].text))
+        {
+            reveal(tokens, size);
+        }
+        else if(!strcmp("locate", tokens[0].text))
+        {
+            locate(tokens, size);
         }
         else
         {
