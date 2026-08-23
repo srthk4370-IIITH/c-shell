@@ -153,5 +153,10 @@ void tokenize(char* s)
         printf("cshell: Invalid Syntax\n");
         return;
     }
+    //Print the tokens array
+    /*for(int x=0; x<size; x++)
+    {
+        printf("Token %d: Type: %d, Text: %s\n", x  + 1, tokens[x].type, tokens[x].text);
+    }*/
     parse(tokens, size);
 }

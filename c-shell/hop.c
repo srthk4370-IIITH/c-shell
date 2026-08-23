@@ -23,8 +23,8 @@ void update_standings()
     {
         for (int j = i + 1; j < pos; j++)
         {
-            int score_i = standings[i] + 2 * freq[standings[i]];
-            int score_j = standings[j] + 2 * freq[standings[j]];
+            int score_i = pos - standings[i] + 2 * freq[standings[i]];
+            int score_j = pos -  standings[j] + 2 * freq[standings[j]];
 
             if (score_j > score_i)
             {
@@ -102,14 +102,15 @@ void hop(Token* tokens, int size)
                     }
                     else
                     {
-                        update(current);
+                        update(o);
                         setenv("OLDPWD", current, 1);
                     }
                 }
             }
             else if(!chdir(tokens[x].text))
             {
-                update(current);
+                char* o = getcwd(NULL, 0);
+                update(o);
                 setenv("OLDPWD", current, 1);
             }
             else
@@ -121,7 +122,8 @@ void hop(Token* tokens, int size)
                     {
                         if(!chdir(recent[standings[y]]))
                         {
-                            update(current);
+                            char* o = getcwd(NULL, 0);
+                            update(o);
                             setenv("OLDPWD", current, 1);
                             flag = 1;
                             break;
@@ -133,6 +135,10 @@ void hop(Token* tokens, int size)
                     printf("hop: Command not found\n");
                 }
             }
+        }
+        else
+        {
+            update(current);
         }
     }
 }

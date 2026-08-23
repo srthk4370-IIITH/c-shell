@@ -5,6 +5,7 @@
 #include "include/reveal.h"
 #include "include/locate.h"
 #include "include/cmd.h"
+#include "include/peek.h"
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -31,6 +32,10 @@ void cmd(Token* tokens, int size)
         else if(!strcmp("locate", tokens[0].text))
         {
             locate(tokens, size);
+        }
+        else if(!strcmp("peek", tokens[0].text))
+        {
+            peek(tokens, size);
         }
         else
         {

@@ -76,24 +76,59 @@ void reveal(Token* tokens, int size)
         }
         if(a && t)
         {
-            system("ls -aR");
+            char ans[1024];
+            FILE* fp =popen("ls -aR", "r");
+            while(fgets(ans, sizeof(ans), fp) != NULL)
+            {
+                printf("%s", ans);
+            }
+            printf("\n");
+            pclose(fp);
         }
         else if(a)
         {
-            system("ls -a");
+            FILE* fp =popen("ls -a", "r");
+            char ans[1024];
+            while(fgets(ans, sizeof(ans), fp) != NULL)
+            {
+                printf("%s", ans);
+            }
+            printf("\n");
+            pclose(fp);
         }
         else if(t)
         {
-            system("ls -R");
+            FILE* fp =popen("ls -R", "r");
+            char ans[1024];
+            while(fgets(ans, sizeof(ans), fp) != NULL)
+            {
+                printf("%s", ans);
+            }
+            printf("\n");
+            pclose(fp);
         }
         else
         {
-            system("ls");
+            FILE* fp =popen("ls", "r");
+            char ans[1024];
+            while(fgets(ans, sizeof(ans), fp) != NULL)
+            {
+                printf("%s", ans);
+            }
+            printf("\n");
+            pclose(fp);
         }
         chdir(curr);
     }
     else
     {
-        system("ls");
+        FILE* fp =popen("ls", "r");
+        char ans[1024];
+        while(fgets(ans, sizeof(ans), fp) != NULL)
+        {
+            printf("%s", ans);
+        }
+        printf("\n");
+        pclose(fp);
     }
 }

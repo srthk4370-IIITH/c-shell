@@ -16,6 +16,8 @@ int main()
     char* user = pw->pw_name;
     char hostname[HOST_NAME_MAX+1];
     gethostname(hostname, sizeof(hostname));
+    tokenize("hop .");
+    tokenize("echo \"Welcome to my C-Shell\"");
     while(1)
     {
         char *cwd = getcwd(NULL, 0);
