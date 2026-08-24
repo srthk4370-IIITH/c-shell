@@ -63,7 +63,7 @@ void reveal(Token* tokens, int size)
             }
         }
         int cd = 0;
-        if(h) cd = chdir("~");
+        if(h) cd = chdir(home);
         else if(p) cd = chdir("..");
         else if(l)
         {

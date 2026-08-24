@@ -18,4 +18,6 @@ typedef struct Token
     TID type;
 }Token;
 
+extern char* home;
+
 #endif

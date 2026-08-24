@@ -68,7 +68,7 @@ void revfile(Token* tokens, int x, int flag, int lines)
                 lseek(fd, np+1, SEEK_SET);
                 char *line = malloc((int)(lp-np+2));
                 ssize_t len = read(fd, line, lp - np + 1);
-                if(flag)
+                if(flag && nonempty_rev(line, len))
                 {
                     char buffer[30];
                     sprintf(buffer, "%d ", lines);
@@ -92,18 +92,15 @@ void revfile(Token* tokens, int x, int flag, int lines)
 
             char line[1024];
             ssize_t len = read(fd, line, lp);
-            if(nonempty(line))
+            if(flag && nonempty_rev(line, len))
             {
-                if(flag)
-                {
-                    char buffer[30];
-                    sprintf(buffer, "%d ", lines);
-                    lines--;
-                    write(STDOUT_FILENO, buffer, strlen(buffer));
-                }
-                write(STDOUT_FILENO, line, len);
-                write(STDOUT_FILENO, "\n", 1);
+                char buffer[30];
+                sprintf(buffer, "%d ", lines);
+                lines--;
+                write(STDOUT_FILENO, buffer, strlen(buffer));
             }
+            write(STDOUT_FILENO, line, len);
+            write(STDOUT_FILENO, "\n", 1);
         }
         close(fd);
     }
@@ -177,7 +174,7 @@ void peek(Token* tokens, int size)
                 if(r && n)
                 {
                     char buffer[1025];
-                    int i = 1;
+                    int i = 0;
                     while(fgets(buffer, 1024, f))
                     {
                         if(nonempty(buffer))
@@ -202,6 +199,10 @@ void peek(Token* tokens, int size)
                             printf("%d %s", i, buffer);
                             i++;
                         }
+                        else
+                        {
+                            printf("\n");
+                        }
                     }
                     printf("\n");
                 }
@@ -217,7 +218,7 @@ void peek(Token* tokens, int size)
             }
             else
             {
-
+                //TODO: Implement The Stdin function
             }
         }
     }

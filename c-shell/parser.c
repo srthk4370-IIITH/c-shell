@@ -1,4 +1,5 @@
 #include "include/token.h"
+#include "include/grp.h"
 #include "include/parser.h"
 #include <stdio.h>
 #include "include/cmd.h"
@@ -65,7 +66,7 @@ void parse(Token* tokens, int size)
     }
     if(c == 1 || c == 4)
     {
-        cmd(tokens, size);
+        grp(tokens, size);
         return;
     }
     printf("cshell: Invalid Syntax\n");

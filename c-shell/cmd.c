@@ -39,6 +39,7 @@ void cmd(Token* tokens, int size)
         }
         else
         {
+            
             printf("Command not build yet.... builder is busy in NAB construction\n");
         }
     }

@@ -68,7 +68,7 @@ void update(char *cwd)
         // New entry
         if (pos < SIZE)
             pos++;
-        else
+        else if(recent[SIZE - 1] != home)
             free(recent[SIZE - 1]);
         for (int i = pos - 1; i > 0; i--)
         {
@@ -85,10 +85,20 @@ void update(char *cwd)
 
 void hop(Token* tokens, int size)
 {
+    if(size == 1)
+    {
+        chdir(home);
+        update(home);
+    }
     for(int x=1; x<size; x++)
     {
         char *current = getcwd(NULL, 0);
-        if(strcmp(".", tokens[x].text))
+        if(!strcmp("~", tokens[x].text))
+        {
+            chdir(home);
+            update(home);
+        }
+        else if(strcmp(".", tokens[x].text))
         {
             if(!strcmp("-", tokens[x].text))
             {
