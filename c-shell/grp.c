@@ -9,13 +9,16 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-int stream(Token* seg, int size, Token* clean, int* csize)
+int stream(Token* seg, int size, Token* clean, int* csize, int* out, int* out_pos, int* tempout)
 {
     char tmp1[] = "/tmp/cshell_in_XXXXXX";
+    char tmp2[] = "/tmp/cshell_out_XXXXXX";
     int tempfd= -1;
+    *tempout = -1;
     int enc = 0;
+    int enco = 0;
     char buf[4097];
-
+    *out_pos = 0;
     *csize = 0;
     for(int x=0; x<size; x++)
     {
@@ -55,6 +58,48 @@ int stream(Token* seg, int size, Token* clean, int* csize)
             close(fd);
             x++;
         }
+        else if(!strcmp(">", seg[x].text))
+        {
+            if(!enco)
+            {
+                *tempout = mkstemp(tmp2);
+                if(*tempout < 0 )return -1;
+                unlink(tmp2);
+                enco = 1;
+            }
+            out[(*out_pos)++] = open(seg[x+1].text, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+            if(out[(*out_pos)-1] < 0)
+            {
+                printf("cshell: Cannot create file %s\n", seg[x+1].text);
+                for(int x=0; x<*out_pos-1; x++)
+                {
+                    close(out[x]);
+                }
+                return -1;
+            }
+            x++;
+        }
+        else if(!strcmp(">>", seg[x].text))
+        {
+            if(!enco)
+            {
+                *tempout = mkstemp(tmp2);
+                if(*tempout < 0 )return -1;
+                unlink(tmp2);
+                enco = 1;
+            }
+            out[(*out_pos)++] = open(seg[x+1].text, O_WRONLY | O_CREAT | O_APPEND, 0644);
+            if(out[(*out_pos)-1] < 0)
+            {
+                printf("cshell: Cannot create file %s\n", seg[x+1].text);
+                for(int x=0; x<*out_pos-1; x++)
+                {
+                    close(out[x]);
+                }
+                return -1;
+            }
+            x++;
+        }
         else
         {
             clean[(*csize)++] = seg[x];
@@ -75,8 +120,11 @@ int stream(Token* seg, int size, Token* clean, int* csize)
 void run(Token* tokens, int size)
 {
     Token clean[size];
+    int out[size];
     int csize = 0;
-    int fd = stream(tokens, size, clean, &csize);
+    int out_pos = 0;
+    int tempout = -1;
+    int fd = stream(tokens, size, clean, &csize, out, &out_pos, &tempout);
     if(fd == -1)
     {
         return;
@@ -85,30 +133,101 @@ void run(Token* tokens, int size)
     {
         if(fd >= 0)
             close(fd);
+
+        if(tempout >= 0)
+            close(tempout);
+
         return;
     }
-    if(fd == -2)
+    int stdout = dup(STDOUT_FILENO);
+    if(stdout < 0)
     {
-        cmd(clean, csize);
+        if(fd >= 0)
+            close(fd);
+
+        if(tempout >= 0)
+            close(tempout);
+
         return;
     }
     int std = dup(STDIN_FILENO);
-    if(fd < 0)
+    if(std < 0)
     {
-        close(fd);
-        close(std);
+        close(stdout);
+        if(fd >= 0)
+            close(fd);
+
+        if(tempout >= 0)
+            close(tempout);
+
         return;
     }
-    if(dup2(fd, STDIN_FILENO) < 0)
+
+    if(tempout >= 0)
     {
-        close(fd);
-        close(std);
-        return;
+        if(dup2(tempout, STDOUT_FILENO) < 0)
+        {
+            close(tempout);
+            close(stdout);
+            close(std);
+            return;
+        }
     }
-    close(fd);
+
+    if(fd >= 0)
+    {
+        if(dup2(fd, STDIN_FILENO) < 0)
+        {
+            close(fd);
+            close(std);
+            dup2(stdout, STDOUT_FILENO);
+            close(stdout);
+            return;
+        }
+
+        close(fd);
+    }
+
     cmd(clean, csize);
+
+    if(tempout >= 0)
+    {
+        lseek(tempout, 0, SEEK_SET);
+
+        char buf[4096];
+        ssize_t r;
+
+        while((r = read(tempout, buf, sizeof(buf))) > 0)
+        {
+            for(int x = 0; x < out_pos; x++)
+            {
+                ssize_t off = 0;
+
+                while(off < r)
+                {
+                    ssize_t w = write(out[x], buf + off, r - off);
+
+                    if(w < 0)
+                        break;
+
+                    off += w;
+                }
+            }
+        }
+
+        for(int x = 0; x < out_pos; x++)
+        {
+            close(out[x]);
+        }
+
+        close(tempout);
+    }
+
     dup2(std, STDIN_FILENO);
+    dup2(stdout, STDOUT_FILENO);
+
     close(std);
+    close(stdout);
 }
 
 void grp(Token* tokens, int size)
