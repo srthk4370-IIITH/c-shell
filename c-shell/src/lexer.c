@@ -1,8 +1,8 @@
 #include <string.h>
 #include <stdlib.h>
-#include "include/token.h"
-#include "include/parser.h"
-#include "include/lexer.h"
+#include "../include/token.h"
+#include "../include/parser.h"
+#include "../include/lexer.h"
 #include <stdio.h>
 
 void tokencpy(Token* tokens, int start, int x, TID t, int size, char* s)

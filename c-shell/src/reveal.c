@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "include/token.h"
+#include "../include/token.h"
 
 void reveal(Token* tokens, int size)
 {

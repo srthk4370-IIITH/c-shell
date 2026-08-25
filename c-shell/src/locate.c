@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <libgen.h>
 #include <string.h>
-#include "include/token.h"
+#include "../include/token.h"
 
 void locate(Token* tokens, int size)
 {

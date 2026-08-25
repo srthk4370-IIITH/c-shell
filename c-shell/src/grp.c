@@ -1,6 +1,6 @@
-#include "include/token.h"
-#include "include/cmd.h"
-#include "include/grp.h"
+#include "../include/token.h"
+#include "../include/cmd.h"
+#include "../include/grp.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>

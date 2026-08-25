@@ -1,8 +1,8 @@
-#include "include/token.h"
-#include "include/grp.h"
-#include "include/parser.h"
+#include "../include/token.h"
+#include "../include/grp.h"
+#include "../include/parser.h"
 #include <stdio.h>
-#include "include/cmd.h"
+#include "../include/cmd.h"
 
 int transition(int c, TID input)
 {

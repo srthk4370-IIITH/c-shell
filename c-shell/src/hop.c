@@ -1,6 +1,6 @@
-#include "include/token.h"
-#include "include/lower.h"
-#include "include/hop.h"
+#include "../include/token.h"
+#include "../include/lower.h"
+#include "../include/hop.h"
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>

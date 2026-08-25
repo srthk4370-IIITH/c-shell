@@ -4,8 +4,8 @@
 #include <pwd.h>
 #include <limits.h>
 #include <string.h>
-#include "include/lexer.h"
-#include "include/token.h"
+#include "../include/lexer.h"
+#include "../include/token.h"
 
 #define RED     "\033[1m\033[95m"
 #define BLUE     "\033[1m\033[96m"

@@ -1,5 +1,5 @@
-#include "include/echo.h"
-#include "include/token.h"
+#include "../include/echo.h"
+#include "../include/token.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
