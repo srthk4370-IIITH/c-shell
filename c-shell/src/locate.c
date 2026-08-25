@@ -41,7 +41,7 @@ void locate(Token* tokens, int size)
         }
         if(f)
         {
-            printf("reveal: command not found(%s)\n", tokens[x].text);
+            printf("locate: command not found(%s)\n", tokens[x].text);
         }
     }
 }
