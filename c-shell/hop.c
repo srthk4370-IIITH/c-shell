@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
 
 #define SIZE 10
 
@@ -12,7 +13,49 @@ int pos = 0;                 // current number of entries
 char *recent[SIZE];          // recent[0] = most recent
 int freq[SIZE];              // frequency of each entry
 int standings[SIZE];         // indices sorted by score
+char path[PATH_MAX];
+void path_init()
+{
+    strcpy(path, home);
+    strcat(path, "/.cshell_history");
+}
 
+
+void save_state()
+{
+    FILE* f = fopen(path, "w");
+    if(f == NULL)
+    {
+        printf("cshell: Unable to save state\n");
+        return;
+    }
+    fprintf(f, "%d\n", pos);
+    for(int x=0; x<pos; x++)
+    {
+        fprintf(f, "%d %d %s\n", standings[x], freq[standings[x]], recent[standings[x]]);
+    }
+    fclose(f);
+}
+
+void load()
+{
+    FILE* f = fopen(path, "r");
+    if(f == NULL)
+    {
+        return;
+    }
+    fscanf(f, "%d\n", &pos);
+    for(int x=0; x<pos; x++)
+    {
+        int index, frequency;
+        char buffer[PATH_MAX];
+        fscanf(f, "%d %d %[^\n]\n", &index, &frequency, buffer);
+        standings[x] = index;
+        recent[index] = strdup(buffer);
+        freq[index] = frequency;
+    }
+    fclose(f);
+}
 
 void update_standings()
 {
@@ -34,6 +77,7 @@ void update_standings()
             }
         }
     }
+    save_state();
 }
 
 
@@ -79,12 +123,13 @@ void update(char *cwd)
         recent[0] = cwd;
         freq[0] = 1;
     }
-
     update_standings();
 }
 
 void hop(Token* tokens, int size)
 {
+    path_init();
+    load();
     if(size == 1)
     {
         chdir(home);
@@ -150,5 +195,9 @@ void hop(Token* tokens, int size)
         {
             update(current);
         }
+    }
+    for(int x=0; x<pos; x++)
+    {
+        free(recent[x]);
     }
 }
