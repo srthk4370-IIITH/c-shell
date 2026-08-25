@@ -17,7 +17,7 @@ char path[PATH_MAX];
 void path_init()
 {
     strcpy(path, home);
-    strcat(path, "/.cshell_history");
+    strcat(path, "/src/.cshell_history");
 }
 
 
