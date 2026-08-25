@@ -7,9 +7,23 @@
 
 void tokencpy(Token* tokens, int start, int x, TID t, int size, char* s)
 {
-    tokens[size].text = (char*)malloc(x-start+1);
-    memcpy(tokens[size].text, &s[start], x-start);
-    tokens[size].text[x-start] = '\0';
+    int output_size = 0;
+    tokens[size].text = malloc(x - start + 1);
+    if (tokens[size].text == NULL)
+        return;
+    for (int i = start; i < x; i++)
+    {
+        if (s[i] == '\\' && i + 1 < x && s[i + 1] == 'n')
+        {
+            tokens[size].text[output_size++] = '\n';
+            i++;
+        }
+        else
+        {
+            tokens[size].text[output_size++] = s[i];
+        }
+    }
+    tokens[size].text[output_size] = '\0';
     tokens[size].type = t;
 }
 
