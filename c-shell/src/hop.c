@@ -104,7 +104,7 @@ void update(char *cwd)
             recent[i] = recent[i - 1];
             freq[i] = freq[i - 1];
         }
-        recent[0] = cwd;
+        recent[0] = strdup(cwd);
         freq[0] = old_freq + 1;
     }
     else
@@ -112,7 +112,7 @@ void update(char *cwd)
         // New entry
         if (pos < SIZE)
             pos++;
-        else if(recent[SIZE - 1] != home)
+        else 
             free(recent[SIZE - 1]);
         for (int i = pos - 1; i > 0; i--)
         {
@@ -120,7 +120,7 @@ void update(char *cwd)
             freq[i] = freq[i - 1];
         }
 
-        recent[0] = cwd;
+        recent[0] = strdup(cwd);
         freq[0] = 1;
     }
     update_standings();
