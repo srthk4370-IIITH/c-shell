@@ -60,6 +60,13 @@ void execute(char* path, char** argv)
     waitpid(pid, NULL, 0);
 }
 
+void execute_child(char* path, char** argv)
+{
+    execv(path, argv);
+    printf("cshell: Command not found(%s)\n", argv[0]);
+    _exit(127);
+}
+
 void external(char** argv)
 {
     char* command = argv[0];
@@ -111,6 +118,60 @@ void external(char** argv)
     }
 }
 
+void external_child(char** argv)
+{
+    char* command = argv[0];
+    if(command[0] == '%')
+    {
+        command++;
+        char* path = search(command);
+        if(path != NULL)
+        {
+            argv[0] = command;
+            execute_child(path, argv);
+            free(path);
+        }
+        else
+        {
+            printf("cshell: Command not found(%s)\n", argv[0]);
+            _exit(127);
+        }
+    }
+    else if(strchr(argv[0], '/') != NULL)
+    {
+        if(!access(argv[0], X_OK))
+        {
+            execute_child(argv[0], argv);
+        }
+        else
+        {
+            printf("cshell: Command not found(%s)\n", argv[0]);
+            _exit(127);
+        }
+    }
+    else
+    {
+        char path[1025];
+        snprintf(path, 1024, "./%s", command);
+        if(!access(path, X_OK))
+        {
+            execute_child(path, argv);
+            return;
+        }
+        char* ex_path = search(command);
+        if(ex_path != NULL)
+        {
+            execute_child(ex_path, argv);
+            free(ex_path);
+        }
+        else
+        {
+            printf("cshell: Command not found(%s)\n", command);
+            _exit(127);
+        }
+    }
+}
+
 void cmd(Token* tokens, int size)
 {
     if(size> 0)
@@ -145,6 +206,44 @@ void cmd(Token* tokens, int size)
             }
             argv[size] = NULL;
             external(argv);
+        }
+    }
+}
+
+void cmd_child(Token* tokens, int size)
+{
+    if(size> 0)
+    {
+        lower(tokens[0].text);
+        if(!strcmp("echo", tokens[0].text))
+        {
+            echo(tokens, size);
+        }
+        else if(!strcmp("hop", tokens[0].text))
+        {
+            hop(tokens, size);
+        }
+        else if(!strcmp("reveal", tokens[0].text))
+        {
+            reveal(tokens, size);
+        }
+        else if(!strcmp("locate", tokens[0].text))
+        {
+            locate(tokens, size);
+        }
+        else if(!strcmp("peek", tokens[0].text))
+        {
+            peek(tokens, size);
+        }
+        else
+        {
+            char* argv[size+1];
+            for(int x=0; x<size; x++)
+            {
+                argv[x] = tokens[x].text;
+            }
+            argv[size] = NULL;
+            external_child(argv);
         }
     }
 }
