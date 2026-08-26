@@ -5,11 +5,12 @@
 #include <string.h>
 #include "../include/token.h"
 
-void locate(Token* tokens, int size)
+int locate(Token* tokens, int size)
 {
     if(size == 1)
     {
         printf("locate: syntax error\n");
+        return 1;
     }
     for(int x=1; x<size; x++)
     {
@@ -42,6 +43,8 @@ void locate(Token* tokens, int size)
         if(f)
         {
             printf("locate: command not found(%s)\n", tokens[x].text);
+            return 1;
         }
     }
+    return 0;
 }

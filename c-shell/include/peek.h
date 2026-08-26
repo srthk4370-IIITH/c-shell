@@ -2,6 +2,6 @@
 #define PEEK_H
 #include "token.h"
 
-void peek(Token* tokens, int size);
+int peek(Token* tokens, int size);
  
 #endif

@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include "../include/token.h"
 
-void reveal(Token* tokens, int size)
+int reveal(Token* tokens, int size)
 {
     char* curr = getcwd(NULL, 0);
     if(size > 1)
@@ -44,7 +44,7 @@ void reveal(Token* tokens, int size)
                     else
                     {
                         printf("reveal: syntax error\n");
-                        return;
+                        return 1;
                     }
                 }
             }
@@ -53,13 +53,13 @@ void reveal(Token* tokens, int size)
                 if(chdir(tokens[x].text))
                 {
                     printf("reveal: no such directory\n");
-                    return;
+                    return 1;
                 }
             }
             else
             {
                 printf("reveal: syntax error\n");
-                return;
+                return 1;
             }
         }
         int cd = 0;
@@ -72,7 +72,7 @@ void reveal(Token* tokens, int size)
         if(cd)
         {
             printf("reveal: no such directory");
-            return;
+            return 1;
         }
         if(a && t)
         {
@@ -131,4 +131,5 @@ void reveal(Token* tokens, int size)
         printf("\n");
         pclose(fp);
     }
+    return 0;
 }

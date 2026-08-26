@@ -2,6 +2,6 @@
 #define HOP_H
 #include "token.h"
 
-void hop(Token* tokens, int size);
+int hop(Token* tokens, int size);
 
 #endif

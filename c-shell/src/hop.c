@@ -126,7 +126,7 @@ void update(char *cwd)
     update_standings();
 }
 
-void hop(Token* tokens, int size)
+int hop(Token* tokens, int size)
 {
     path_init();
     load();
@@ -154,6 +154,7 @@ void hop(Token* tokens, int size)
                     if(chdir(o))
                     {
                         printf("hop: No such directory\n");
+                        return 1;
                     }
                     else
                     {
@@ -188,6 +189,7 @@ void hop(Token* tokens, int size)
                 if(!flag)
                 {
                     printf("hop: Command not found\n");
+                    return 1;
                 }
             }
         }
@@ -200,4 +202,5 @@ void hop(Token* tokens, int size)
     {
         free(recent[x]);
     }
+    return 0;
 }

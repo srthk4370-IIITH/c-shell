@@ -110,7 +110,7 @@ void revfile(Token* tokens, int x, int flag, int lines)
     }
 }
 
-void peek(Token* tokens, int size)
+int peek(Token* tokens, int size)
 {
     if(size > 1)
     {
@@ -222,4 +222,5 @@ void peek(Token* tokens, int size)
             }
         }
     }
+    return 0;
 }

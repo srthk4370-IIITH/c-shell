@@ -290,7 +290,7 @@ static int prepare_pipeline_stage(Token* input, int input_size, Token* clean, in
     return 0;
 }
 
-void run(Token* tokens, int size)
+int run(Token* tokens, int size)
 {
     Token clean[size];
     int out[size];
@@ -300,7 +300,7 @@ void run(Token* tokens, int size)
     int fd = stream(tokens, size, clean, &csize, out, &out_pos, &tempout);
     if(fd == -1)
     {
-        return;
+        return 1;
     }
     if(csize == 0)
     {
@@ -310,7 +310,7 @@ void run(Token* tokens, int size)
         if(tempout >= 0)
             close(tempout);
 
-        return;
+        return 1;
     }
     int stdout = dup(STDOUT_FILENO);
     if(stdout < 0)
@@ -321,7 +321,7 @@ void run(Token* tokens, int size)
         if(tempout >= 0)
             close(tempout);
 
-        return;
+        return 1;
     }
     int std = dup(STDIN_FILENO);
     if(std < 0)
@@ -333,7 +333,7 @@ void run(Token* tokens, int size)
         if(tempout >= 0)
             close(tempout);
 
-        return;
+        return 1;
     }
 
     if(tempout >= 0)
@@ -343,7 +343,7 @@ void run(Token* tokens, int size)
             close(tempout);
             close(stdout);
             close(std);
-            return;
+            return 1;
         }
     }
 
@@ -355,15 +355,14 @@ void run(Token* tokens, int size)
             close(std);
             dup2(stdout, STDOUT_FILENO);
             close(stdout);
-            return;
+            return 1;
         }
 
         close(fd);
     }
 
-    cmd(clean, csize);
-
-    if(tempout >= 0)
+    int result = cmd(clean, csize);
+    if(tempout >= 0 && !result)
     {
         lseek(tempout, 0, SEEK_SET);
 
@@ -401,9 +400,10 @@ void run(Token* tokens, int size)
 
     close(std);
     close(stdout);
+    return result;
 }
 
-static void run_pipeline(Token* tokens, int size, int sc)
+static int run_pipeline(Token* tokens, int size, int sc)
 {
     Token* stages[sc];
     int stage[sc];
@@ -413,7 +413,7 @@ static void run_pipeline(Token* tokens, int size, int sc)
         if(stages[x] == NULL)
         {
             printf("cshell: Memory allocation failed\n");
-            return;
+            return 1;
         }
         stage[x] = 0;
     }
@@ -439,7 +439,7 @@ static void run_pipeline(Token* tokens, int size, int sc)
             {
                 free(stages[y]);
             }
-            return;
+            return 1;
         }
     }
     pid_t pids[sc];
@@ -458,7 +458,7 @@ static void run_pipeline(Token* tokens, int size, int sc)
                 close(pipes[y][0]);
                 close(pipes[y][1]);
             }
-            return;
+            return 1;
         }
         else if(pids[x] == 0)
         {
@@ -485,6 +485,7 @@ static void run_pipeline(Token* tokens, int size, int sc)
                     free(stages[y]);
                 }
                 _exit(1);
+                return 1;
             }
             if(csize == 0)
             {
@@ -493,9 +494,11 @@ static void run_pipeline(Token* tokens, int size, int sc)
                     free(stages[y]);
                 }
                 _exit(0);
+                return 0;
             }
-            cmd_child(clean, csize);
+            int r = cmd_child(clean, csize);
             _exit(0);
+            return r;
         }
     }
     for (int x = 0; x < sc - 1; x++)
@@ -511,43 +514,65 @@ static void run_pipeline(Token* tokens, int size, int sc)
     {
         free(stages[x]);
     }
+    return 0;
 }
 
-void grp(Token* tokens, int size)
+int disperse(Token* tokens, int size)
+{
+    int sc = count_stages(tokens, size);
+    if(sc > 1)
+    {
+        return run_pipeline(tokens, size, sc);
+    }
+    return run(tokens, size);
+}
+
+int grp(Token* tokens, int size)
 {
     Token* t = malloc(sizeof(Token)*size);
     if(t == NULL)
     {
         printf("cshell: Memory allocation failed\n");
-        return;
-    }
-    int sc = count_stages(tokens, size);
-    if(sc > 1)
-    {
-        run_pipeline(tokens, size, sc);
-        free(t);
-        return;
+        return 1;
     }
     int i = 0;
     for(int x=0; x<size; x++)
     {
         if(!strcmp(";", tokens[x].text))
         {
-            run(t, i);
-            i=0;
-            return;
+            if(disperse(t, i))
+            {
+                free(t);
+                return 1;
+            };
+            free(t);
+            t = malloc(sizeof(Token)*(size-x-1));
+            i = 0;
+            if(t == NULL)
+            {
+                printf("cshell: Memory allocation failed\n");
+                return 1;
+            }
         }
         else if(!strcmp("&", tokens[x].text))
         {
-            run(t, i);
-            i=0;
-            return;
+            disperse(t, i);
+            free(t);
+            t = malloc(sizeof(Token)*(size-x-1));
+            if(t == NULL)   
+            {
+                printf("cshell: Memory allocation failed\n");
+                return 1;
+            }
+            i = 0;
         }
         else
         {
-            t[i++] = tokens[x];
+            t[i] = tokens[x];
+            i++;
         }
     }
-    run(t, i);
+    disperse(t, i);
     free(t);
+    return 0;
 }

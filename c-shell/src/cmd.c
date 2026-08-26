@@ -43,13 +43,13 @@ char* search(char* ex)
     return NULL;
 }
 
-void execute(char* path, char** argv)
+int execute(char* path, char** argv)
 {
     pid_t pid = fork();
     if(pid < 0)
     {
         perror("fork");
-        return;
+        return 1;
     }
     if(pid == 0)
     {
@@ -58,16 +58,18 @@ void execute(char* path, char** argv)
         _exit(127);
     }
     waitpid(pid, NULL, 0);
+    return 0;
 }
 
-void execute_child(char* path, char** argv)
+int execute_child(char* path, char** argv)
 {
     execv(path, argv);
     printf("cshell: Command not found(%s)\n", argv[0]);
     _exit(127);
+    return 0;
 }
 
-void external(char** argv)
+int external(char** argv)
 {
     char* command = argv[0];
     if(command[0] == '%')
@@ -79,10 +81,12 @@ void external(char** argv)
             argv[0] = command;
             execute(path, argv);
             free(path);
+            return 0;
         }
         else
         {
             printf("cshell: Command not found(%s)\n", argv[0]);
+            return 1;
         }
     }
     else if(strchr(argv[0], '/') != NULL)
@@ -90,10 +94,12 @@ void external(char** argv)
         if(!access(argv[0], X_OK))
         {
             execute(argv[0], argv);
+            return 0;
         }
         else
         {
             printf("cshell: Command not found(%s)\n", argv[0]);
+            return 1;
         }
     }
     else
@@ -103,22 +109,24 @@ void external(char** argv)
         if(!access(path, X_OK))
         {
             execute(path, argv);
-            return;
+            return 0;
         }
         char* ex_path = search(command);
         if(ex_path != NULL)
         {
             execute(ex_path, argv);
             free(ex_path);
+            return 0;
         }
         else
         {
             printf("cshell: Command not found(%s)\n", command);
+            return 1;
         }
     }
 }
 
-void external_child(char** argv)
+int external_child(char** argv)
 {
     char* command = argv[0];
     if(command[0] == '%')
@@ -130,11 +138,13 @@ void external_child(char** argv)
             argv[0] = command;
             execute_child(path, argv);
             free(path);
+            return 0;
         }
         else
         {
             printf("cshell: Command not found(%s)\n", argv[0]);
             _exit(127);
+            return 1;
         }
     }
     else if(strchr(argv[0], '/') != NULL)
@@ -142,11 +152,13 @@ void external_child(char** argv)
         if(!access(argv[0], X_OK))
         {
             execute_child(argv[0], argv);
+            return 0;
         }
         else
         {
             printf("cshell: Command not found(%s)\n", argv[0]);
             _exit(127);
+            return 1;
         }
     }
     else
@@ -156,46 +168,48 @@ void external_child(char** argv)
         if(!access(path, X_OK))
         {
             execute_child(path, argv);
-            return;
+            return 0;
         }
         char* ex_path = search(command);
         if(ex_path != NULL)
         {
             execute_child(ex_path, argv);
             free(ex_path);
+            return 0;
         }
         else
         {
             printf("cshell: Command not found(%s)\n", command);
             _exit(127);
+            return 1;
         }
     }
 }
 
-void cmd(Token* tokens, int size)
+int cmd(Token* tokens, int size)
 {
     if(size> 0)
     {
         lower(tokens[0].text);
         if(!strcmp("echo", tokens[0].text))
         {
-            echo(tokens, size);
+            return echo(tokens, size);
         }
         else if(!strcmp("hop", tokens[0].text))
         {
-            hop(tokens, size);
+            return hop(tokens, size);
         }
         else if(!strcmp("reveal", tokens[0].text))
         {
-            reveal(tokens, size);
+            return reveal(tokens, size);
         }
         else if(!strcmp("locate", tokens[0].text))
         {
-            locate(tokens, size);
+            return locate(tokens, size);
         }
         else if(!strcmp("peek", tokens[0].text))
         {
-            peek(tokens, size);
+            return peek(tokens, size);
         }
         else
         {
@@ -205,35 +219,36 @@ void cmd(Token* tokens, int size)
                 argv[x] = tokens[x].text;
             }
             argv[size] = NULL;
-            external(argv);
+            return external(argv);
         }
     }
+    return 0;
 }
 
-void cmd_child(Token* tokens, int size)
+int cmd_child(Token* tokens, int size)
 {
     if(size> 0)
     {
         lower(tokens[0].text);
         if(!strcmp("echo", tokens[0].text))
         {
-            echo(tokens, size);
+            return echo(tokens, size);
         }
         else if(!strcmp("hop", tokens[0].text))
         {
-            hop(tokens, size);
+            return hop(tokens, size);
         }
         else if(!strcmp("reveal", tokens[0].text))
         {
-            reveal(tokens, size);
+            return reveal(tokens, size);
         }
         else if(!strcmp("locate", tokens[0].text))
         {
-            locate(tokens, size);
+            return locate(tokens, size);
         }
         else if(!strcmp("peek", tokens[0].text))
         {
-            peek(tokens, size);
+            return peek(tokens, size);
         }
         else
         {
@@ -243,7 +258,8 @@ void cmd_child(Token* tokens, int size)
                 argv[x] = tokens[x].text;
             }
             argv[size] = NULL;
-            external_child(argv);
+            return external_child(argv);
         }
     }
+    return 0;
 }
