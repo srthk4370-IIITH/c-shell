@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <errno.h>
 #include "../include/token.h"
 
 int reveal(Token* tokens, int size)
@@ -78,7 +79,21 @@ int reveal(Token* tokens, int size)
         {
             char ans[1024];
             FILE* fp =popen("ls -aR", "r");
-            while(fgets(ans, sizeof(ans), fp) != NULL)
+            while(1)
+            {
+                if(fgets(ans, sizeof(ans), fp) != NULL)
+                {
+                    printf("%s", ans);
+                    continue;
+                }
+                if(errno == EINTR)
+                {
+                    clearerr(fp);
+                    continue;
+                }
+                break;
+            }
+            if(fgets(ans, sizeof(ans), fp) != NULL)
             {
                 printf("%s", ans);
             }
@@ -89,9 +104,19 @@ int reveal(Token* tokens, int size)
         {
             FILE* fp =popen("ls -a", "r");
             char ans[1024];
-            while(fgets(ans, sizeof(ans), fp) != NULL)
+            while(1)
             {
-                printf("%s", ans);
+                if(fgets(ans, sizeof(ans), fp) != NULL)
+                {
+                    printf("%s", ans);
+                    continue;
+                }
+                if(errno == EINTR)
+                {
+                    clearerr(fp);
+                    continue;
+                }
+                break;
             }
             printf("\n");
             pclose(fp);
@@ -100,9 +125,19 @@ int reveal(Token* tokens, int size)
         {
             FILE* fp =popen("ls -R", "r");
             char ans[1024];
-            while(fgets(ans, sizeof(ans), fp) != NULL)
+            while(1)
             {
-                printf("%s", ans);
+                if(fgets(ans, sizeof(ans), fp) != NULL)
+                {
+                    printf("%s", ans);
+                    continue;
+                }
+                if(errno == EINTR)
+                {
+                    clearerr(fp);
+                    continue;
+                }
+                break;
             }
             printf("\n");
             pclose(fp);
@@ -111,9 +146,19 @@ int reveal(Token* tokens, int size)
         {
             FILE* fp =popen("ls", "r");
             char ans[1024];
-            while(fgets(ans, sizeof(ans), fp) != NULL)
+            while(1)
             {
-                printf("%s", ans);
+                if(fgets(ans, sizeof(ans), fp) != NULL)
+                {
+                    printf("%s", ans);
+                    continue;
+                }
+                if(errno == EINTR)
+                {
+                    clearerr(fp);
+                    continue;
+                }
+                break;
             }
             printf("\n");
             pclose(fp);
@@ -124,9 +169,19 @@ int reveal(Token* tokens, int size)
     {
         FILE* fp =popen("ls", "r");
         char ans[1024];
-        while(fgets(ans, sizeof(ans), fp) != NULL)
+        while(1)
         {
-            printf("%s", ans);
+            if(fgets(ans, sizeof(ans), fp) != NULL)
+            {
+                printf("%s", ans);
+                continue;
+            }
+            if(errno == EINTR)
+            {
+                clearerr(fp);
+                continue;
+            }
+            break;
         }
         printf("\n");
         pclose(fp);

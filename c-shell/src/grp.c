@@ -1,6 +1,7 @@
 #include "../include/token.h"
 #include "../include/cmd.h"
 #include "../include/grp.h"
+#include "../include/bg.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -23,7 +24,7 @@ static int count_stages(Token* tokens, int size)
     return stages;
 }
 
-int stream(Token* seg, int size, Token* clean, int* csize, int* out, int* out_pos, int* tempout)
+int stream(Token* seg, int size, Token* clean, int* csize, int* out, int* out_pos, int* tempout, int bg)
 {
     char tmp1[] = "/tmp/cshell_in_XXXXXX";
     char tmp2[] = "/tmp/cshell_out_XXXXXX";
@@ -72,46 +73,56 @@ int stream(Token* seg, int size, Token* clean, int* csize, int* out, int* out_po
             close(fd);
             x++;
         }
-        else if(!strcmp(">", seg[x].text))
+        else if(!strcmp(">", seg[x].text) || !strcmp(">>", seg[x].text))
         {
-            if(!enco)
+            int flags = O_WRONLY | O_CREAT;
+            int fd;
+
+            if(!strcmp(">", seg[x].text))
             {
-                *tempout = mkstemp(tmp2);
-                if(*tempout < 0 )return -1;
-                unlink(tmp2);
-                enco = 1;
+                flags |= O_TRUNC;
             }
-            out[(*out_pos)++] = open(seg[x+1].text, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-            if(out[(*out_pos)-1] < 0)
+            else
+            {
+                flags |= O_APPEND;
+            }
+
+            fd = open(seg[x+1].text, flags, 0644);
+            if(fd < 0)
             {
                 printf("cshell: Cannot create file %s\n", seg[x+1].text);
-                for(int x=0; x<*out_pos-1; x++)
+                for(int y=0; y<*out_pos; y++)
                 {
-                    close(out[x]);
+                    close(out[y]);
                 }
                 return -1;
             }
-            x++;
-        }
-        else if(!strcmp(">>", seg[x].text))
-        {
-            if(!enco)
+
+            if(bg)
             {
-                *tempout = mkstemp(tmp2);
-                if(*tempout < 0 )return -1;
-                unlink(tmp2);
-                enco = 1;
-            }
-            out[(*out_pos)++] = open(seg[x+1].text, O_WRONLY | O_CREAT | O_APPEND, 0644);
-            if(out[(*out_pos)-1] < 0)
-            {
-                printf("cshell: Cannot create file %s\n", seg[x+1].text);
-                for(int x=0; x<*out_pos-1; x++)
+                if(dup2(fd, STDOUT_FILENO) < 0)
                 {
-                    close(out[x]);
+                    close(fd);
+                    return -1;
                 }
-                return -1;
+                close(fd);
             }
+            else
+            {
+                if(!enco)
+                {
+                    *tempout = mkstemp(tmp2);
+                    if(*tempout < 0)
+                    {
+                        close(fd);
+                        return -1;
+                    }
+                    unlink(tmp2);
+                    enco = 1;
+                }
+                out[(*out_pos)++] = fd;
+            }
+
             x++;
         }
         else
@@ -290,14 +301,14 @@ static int prepare_pipeline_stage(Token* input, int input_size, Token* clean, in
     return 0;
 }
 
-int run(Token* tokens, int size)
+int run(Token* tokens, int size, int bg)
 {
     Token clean[size];
     int out[size];
     int csize = 0;
     int out_pos = 0;
     int tempout = -1;
-    int fd = stream(tokens, size, clean, &csize, out, &out_pos, &tempout);
+    int fd = stream(tokens, size, clean, &csize, out, &out_pos, &tempout, bg);
     if(fd == -1)
     {
         return 1;
@@ -361,8 +372,16 @@ int run(Token* tokens, int size)
         close(fd);
     }
 
-    int result = cmd(clean, csize);
-    if(tempout >= 0 && !result)
+    int result;
+    if(bg)
+    {
+        result = cmd_child(clean, csize);
+    }
+    else
+    {
+        result = cmd(clean, csize);
+    }
+    if(!bg && tempout >= 0 && !result)
     {
         lseek(tempout, 0, SEEK_SET);
 
@@ -403,21 +422,47 @@ int run(Token* tokens, int size)
     return result;
 }
 
-static int run_pipeline(Token* tokens, int size, int sc)
+static int run_pipeline(Token* tokens, int size, int sc, int bg, pid_t* f_pid, pid_t* job_pgid, Process* processes, int* process_count)
 {
     Token* stages[sc];
     int stage[sc];
+
+    if(f_pid != NULL)
+    {
+        *f_pid = -1;
+    }
+
+    if(job_pgid != NULL)
+    {
+        *job_pgid = -1;
+    }
+
+    if(process_count != NULL)
+    {
+        *process_count = 0;
+    }
+
     for(int x=0; x<sc; x++)
     {
         stages[x] = malloc(sizeof(Token)*size);
+
         if(stages[x] == NULL)
         {
             printf("cshell: Memory allocation failed\n");
+
+            for(int y=0; y<x; y++)
+            {
+                free(stages[y]);
+            }
+
             return 1;
         }
+
         stage[x] = 0;
     }
+
     int cs = 0;
+
     for(int x=0; x<size; x++)
     {
         if(tokens[x].type == OP_PIPE)
@@ -429,102 +474,240 @@ static int run_pipeline(Token* tokens, int size, int sc)
             stages[cs][stage[cs]++] = tokens[x];
         }
     }
-    int pipes[sc][2];
+
+    int pipes[sc-1][2];
+
     for(int x=0; x<sc-1; x++)
     {
         if(pipe(pipes[x]) < 0)
         {
             printf("cshell: Pipe creation failed\n");
+
             for(int y=0; y<sc; y++)
             {
                 free(stages[y]);
             }
+
             return 1;
         }
     }
+
     pid_t pids[sc];
+    pid_t first_pid = -1;
+    pid_t pgid = -1;
+
     for(int x=0; x<sc; x++)
     {
         pids[x] = fork();
+
         if(pids[x] < 0)
         {
             printf("cshell: Fork failed\n");
-            for(int y=0; y<sc; y++)
-            {
-                free(stages[y]);
-            }
+
             for(int y=0; y<sc-1; y++)
             {
                 close(pipes[y][0]);
                 close(pipes[y][1]);
             }
+
+            for(int y=0; y<sc; y++)
+            {
+                free(stages[y]);
+            }
+
             return 1;
         }
+
         else if(pids[x] == 0)
         {
+            if(x == 0)
+            {
+                setpgid(0, 0);
+            }
+            else
+            {
+                setpgid(0, pgid);
+            }
+
+            if(bg && x == 0)
+            {
+                int fd = open("/dev/null", O_RDONLY);
+
+                if(fd >= 0)
+                {
+                    dup2(fd, STDIN_FILENO);
+                    close(fd);
+                }
+            }
+
             if(x > 0)
             {
                 dup2(pipes[x-1][0], STDIN_FILENO);
             }
+
             if(x < sc-1)
             {
                 dup2(pipes[x][1], STDOUT_FILENO);
             }
+
             for(int y=0; y<sc-1; y++)
             {
                 close(pipes[y][0]);
                 close(pipes[y][1]);
             }
+
             Token clean[stage[x]];
             int csize = 0;
+
             if(prepare_pipeline_stage(stages[x], stage[x], clean, &csize) < 0)
             {
                 printf("cshell: Error preparing pipeline stage\n");
-                for(int y=0; y<sc; y++)
-                {
-                    free(stages[y]);
-                }
                 _exit(1);
-                return 1;
             }
+
             if(csize == 0)
             {
-                for(int y=0; y<sc; y++)
-                {
-                    free(stages[y]);
-                }
                 _exit(0);
-                return 0;
             }
+
             int r = cmd_child(clean, csize);
-            _exit(0);
-            return r;
+
+            _exit(r);
+        }
+
+        if(x == 0)
+        {
+            first_pid = pids[x];
+            pgid = pids[x];
+        }
+
+        setpgid(pids[x], pgid);
+
+        if(processes != NULL)
+        {
+            processes[x].pid = pids[x];
+
+            if(stage[x] > 0)
+            {
+                strncpy(processes[x].command, stages[x][0].text, sizeof(processes[x].command)-1);
+                processes[x].command[sizeof(processes[x].command)-1] = '\0';
+            }
+            else
+            {
+                processes[x].command[0] = '\0';
+            }
+
+            processes[x].done = 0;
+            processes[x].status = 0;
         }
     }
-    for (int x = 0; x < sc - 1; x++)
+
+    if(f_pid != NULL)
+    {
+        *f_pid = first_pid;
+    }
+
+    if(job_pgid != NULL)
+    {
+        *job_pgid = pgid;
+    }
+
+    if(process_count != NULL)
+    {
+        *process_count = sc;
+    }
+
+    for(int x=0; x<sc-1; x++)
     {
         close(pipes[x][0]);
         close(pipes[x][1]);
     }
-    for(int x=0; x<sc; x++)
+
+    if(!bg)
     {
-        waitpid(pids[x], NULL, 0);
+        int status;
+
+        for(int x=0; x<sc; x++)
+        {
+            if(waitpid(pids[x], &status, 0) < 0)
+            {
+                perror("waitpid");
+            }
+        }
     }
+
     for(int x=0; x<sc; x++)
     {
         free(stages[x]);
     }
+
     return 0;
 }
 
-int disperse(Token* tokens, int size)
+int disperse(Token* tokens, int size, int bg)
 {
+    pid_t first_pid = -1;
+    pid_t pgid = -1;
+    Process processes[100];
+    int process_count = 0;
     int sc = count_stages(tokens, size);
     if(sc > 1)
     {
-        return run_pipeline(tokens, size, sc);
+        int r = run_pipeline(tokens, size, sc, bg, &first_pid, &pgid, processes, &process_count);
+        if(r < 0)
+        {
+            return r;
+        }
+        if(bg)
+        {
+            int ji = add(pgid, first_pid, processes, process_count);
+            if(ji < 0)
+            {
+                return 1;
+            }
+            printf("[%d] %d\n", ji, first_pid);
+        }
+        return r;
     }
-    return run(tokens, size);
+    if(bg)
+    {
+        pid_t pid = fork();
+        if(pid < 0)
+        {
+            perror("fork");
+            return 1;
+        }
+        if(pid == 0)
+        {
+            setpgid(0, 0);
+            int fd = open("/dev/null", O_RDONLY);
+            if(fd >= 0)
+            {
+                dup2(fd, STDIN_FILENO);
+                close(fd);
+            }
+            int r = run(tokens, size, 1);
+            _exit(r);
+        }
+        setpgid(pid, pid);
+        Process proc;
+        proc.pid = pid;
+        strncpy(proc.command, tokens[0].text, sizeof(proc.command)-1);
+        proc.command[sizeof(proc.command)-1] = '\0';
+        proc.done = 0;
+        proc.status = 0;
+        int ji = add(pid, pid, &proc, 1);
+        if(ji < 0)
+        {
+            return 1;
+        }
+        printf("[%d] %d\n", ji, pid);
+        return 0;
+    }
+    else
+    {
+        return run(tokens, size, 0);
+    }
 }
 
 int grp(Token* tokens, int size)
@@ -540,7 +723,7 @@ int grp(Token* tokens, int size)
     {
         if(!strcmp(";", tokens[x].text))
         {
-            if(disperse(t, i))
+            if(disperse(t, i, 0))
             {
                 free(t);
                 return 1;
@@ -556,7 +739,11 @@ int grp(Token* tokens, int size)
         }
         else if(!strcmp("&", tokens[x].text))
         {
-            disperse(t, i);
+            if(disperse(t, i, 1))
+            {
+                free(t);
+                return 1;
+            }
             free(t);
             t = malloc(sizeof(Token)*(size-x-1));
             if(t == NULL)   
@@ -572,7 +759,14 @@ int grp(Token* tokens, int size)
             i++;
         }
     }
-    disperse(t, i);
+    if(i > 0)
+    {
+        if(disperse(t, i, 0))
+        {
+            free(t);
+            return 1;
+        }
+    }
     free(t);
     return 0;
 }
