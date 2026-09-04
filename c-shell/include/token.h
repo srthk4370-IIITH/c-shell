@@ -1,5 +1,6 @@
 #ifndef TOKEN_H
 #define TOKEN_H
+#include <unistd.h>
 
 typedef enum TID
 {
@@ -19,5 +20,6 @@ typedef struct Token
 }Token;
 
 extern char* home;
+extern pid_t shell_pgid;
 
 #endif

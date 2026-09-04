@@ -569,9 +569,10 @@ static int run_pipeline(Token* tokens, int size, int sc, int bg, pid_t* f_pid, p
             {
                 _exit(0);
             }
-
+            signal(SIGINT, SIG_DFL);
+            signal(SIGTSTP, SIG_DFL);
+            signal(SIGTTOU, SIG_DFL);
             int r = cmd_child(clean, csize);
-
             _exit(r);
         }
 
@@ -626,12 +627,27 @@ static int run_pipeline(Token* tokens, int size, int sc, int bg, pid_t* f_pid, p
     if(!bg)
     {
         int status;
-
+        tcsetpgrp(STDIN_FILENO, pgid);
+        int stopped= 0;
         for(int x=0; x<sc; x++)
         {
-            if(waitpid(pids[x], &status, 0) < 0)
+            if(waitpid(pids[x], &status, WUNTRACED) < 0)
             {
                 perror("waitpid");
+            }
+            if(WIFSTOPPED(status))
+            {
+                stopped = 1;
+            }
+        }
+        tcsetpgrp(STDIN_FILENO, shell_pgid);
+        if(stopped)
+        {
+            int jn = add(pgid, first_pid, processes, sc);
+            if(jn >= 0)
+            {
+                stop(jn);
+                printf("[%d] Stopped\n", jn);
             }
         }
     }

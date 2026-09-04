@@ -86,16 +86,12 @@ int reveal(Token* tokens, int size)
                     printf("%s", ans);
                     continue;
                 }
-                if(errno == EINTR)
+                if(ferror(fp) && errno == EINTR)
                 {
                     clearerr(fp);
                     continue;
                 }
                 break;
-            }
-            if(fgets(ans, sizeof(ans), fp) != NULL)
-            {
-                printf("%s", ans);
             }
             printf("\n");
             pclose(fp);
@@ -111,7 +107,7 @@ int reveal(Token* tokens, int size)
                     printf("%s", ans);
                     continue;
                 }
-                if(errno == EINTR)
+                if(ferror(fp) && errno == EINTR)
                 {
                     clearerr(fp);
                     continue;
@@ -132,7 +128,7 @@ int reveal(Token* tokens, int size)
                     printf("%s", ans);
                     continue;
                 }
-                if(errno == EINTR)
+                if(ferror(fp) && errno == EINTR)
                 {
                     clearerr(fp);
                     continue;
@@ -153,7 +149,7 @@ int reveal(Token* tokens, int size)
                     printf("%s", ans);
                     continue;
                 }
-                if(errno == EINTR)
+                if(ferror(fp) && errno == EINTR)
                 {
                     clearerr(fp);
                     continue;
@@ -176,7 +172,7 @@ int reveal(Token* tokens, int size)
                 printf("%s", ans);
                 continue;
             }
-            if(errno == EINTR)
+            if(ferror(fp) && errno == EINTR)
             {
                 clearerr(fp);
                 continue;

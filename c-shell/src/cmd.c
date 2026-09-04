@@ -7,7 +7,6 @@
 #include "../include/cmd.h"
 #include "../include/peek.h"
 #include "../include/bg.h"
-#include "../include/bg.h"
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -56,20 +55,52 @@ int execute(char* path, char** argv)
     }
     if(pid == 0)
     {
+        setpgid(0, 0);
+
+        signal(SIGINT, SIG_DFL);
+        signal(SIGTSTP, SIG_DFL);
+        signal(SIGTTOU, SIG_DFL);
         execv(path, argv);
         printf("cshell: Command not found(%s)\n", argv[0]);
         _exit(127);
     }
     int status;
-    if(waitpid(pid, &status, 0) < 0)
+    setpgid(pid, pid);
+    tcsetpgrp(STDIN_FILENO, pid);
+    if(waitpid(pid, &status, WUNTRACED) < 0)
     {
         perror("waitpid");
+        tcsetpgrp(STDIN_FILENO, shell_pgid);
         return 1;
+    }
+    if(WIFSTOPPED(status))
+    {
+        Process process;
+
+        process.pid = pid;
+        strncpy(
+            process.command,
+            argv[0],
+            sizeof(process.command) - 1
+        );
+        process.command[sizeof(process.command) - 1] = '\0';
+        process.done = 0;
+        process.status = status;
+        int jn = add(pid, pid, &process, 1);
+        if(jn >= 0)
+        {
+            stop(jn);
+            printf("[%d] Stopped\n", jn);
+        }
+        tcsetpgrp(STDIN_FILENO, shell_pgid);
+        return 0;
     }
     if(WIFEXITED(status) && WEXITSTATUS(status) == 0)
     {
+        tcsetpgrp(STDIN_FILENO, shell_pgid);
         return 0;
     }
+    tcsetpgrp(STDIN_FILENO, shell_pgid);
     return 1;
 }
 

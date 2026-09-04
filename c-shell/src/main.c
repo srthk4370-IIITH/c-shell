@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <string.h>
 #include <signal.h>
+#include <errno.h>
 #include "../include/lexer.h"
 #include "../include/token.h"
 #include "../include/bg.h"
@@ -14,6 +15,7 @@
 #define RESET     "\033[0m"
 
 char* home;
+pid_t shell_pgid;
 
 void sig()
 {
@@ -22,6 +24,19 @@ void sig()
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
     sigaction(SIGCHLD, &sa, NULL);
+}
+
+void ignore()
+{
+    signal(SIGINT, SIG_IGN);
+    signal(SIGTSTP, SIG_IGN);
+    signal(SIGTTOU, SIG_IGN);
+}
+
+void doExit(int code)
+{
+    sighup();
+    exit(code);
 }
 
 int main()
@@ -33,7 +48,12 @@ int main()
     home = getcwd(NULL, 0);
     tokenize("hop .");
     tokenize("echo \"Welcome to my C-Shell\"");
+    ignore();
+    shell_pgid = getpid();
+    setpgid(shell_pgid, shell_pgid);
+    tcsetpgrp(STDIN_FILENO, shell_pgid);
     sig();
+    int st = 0;
     while(1)
     {
         char *cwd = getcwd(NULL, 0);
@@ -49,10 +69,28 @@ int main()
         char s[100];
         if(fgets(s, 99, stdin) == NULL)
         {
-            clearerr(stdin);
-            printf("\n");
-            continue;
+            if(errno == EINTR)
+            {
+                clearerr(stdin);
+                continue;
+            }
+            if(feof(stdin))
+            {
+                if(spdJobs())
+                {
+                    if(st)
+                    {
+                        doExit(0);
+                    }
+                    st = 1;
+                    printf("cshell: There are background jobs running. Press Ctrl+D again to exit.\n");
+                    clearerr(stdin);
+                    continue;
+                }
+                doExit(0);
+            }
         }
+        st = 0;
         s[strcspn(s, "\n")] = '\0';
         tokenize(s);
     }
