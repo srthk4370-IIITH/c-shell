@@ -172,5 +172,5 @@ void tokenize(char* s)
     {
         printf("Token %d: Type: %d, Text: %s\n", x  + 1, tokens[x].type, tokens[x].text);
     }*/
-    parse(tokens, size);
+    parse(tokens, size, s);
 }

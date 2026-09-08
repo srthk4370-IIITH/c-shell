@@ -24,6 +24,22 @@ static int count_stages(Token* tokens, int size)
     return stages;
 }
 
+static void make_command(Token* tokens, int size, char* command, size_t command_size)
+{
+    command[0] = '\0';
+
+    for(int x = 0; x < size; x++)
+    {
+        if(x > 0)
+        {
+            strncat(command, " ", command_size - strlen(command) - 1);
+        }
+
+        strncat(command, tokens[x].text,
+                command_size - strlen(command) - 1);
+    }
+}
+
 int stream(Token* seg, int size, Token* clean, int* csize, int* out, int* out_pos, int* tempout, int bg)
 {
     char tmp1[] = "/tmp/cshell_in_XXXXXX";
@@ -422,7 +438,7 @@ int run(Token* tokens, int size, int bg)
     return result;
 }
 
-static int run_pipeline(Token* tokens, int size, int sc, int bg, pid_t* f_pid, pid_t* job_pgid, Process* processes, int* process_count)
+static int run_pipeline(Token* tokens, int size, int sc, int bg, pid_t* f_pid, pid_t* job_pgid, Process* processes, int* process_count, const char* command)
 {
     Token* stages[sc];
     int stage[sc];
@@ -590,7 +606,19 @@ static int run_pipeline(Token* tokens, int size, int sc, int bg, pid_t* f_pid, p
 
             if(stage[x] > 0)
             {
-                strncpy(processes[x].command, stages[x][0].text, sizeof(processes[x].command)-1);
+                processes[x].command[0] = '\0';
+                for(int y = 0; y < stage[x]; y++)
+                {
+                    if(y > 0)
+                    {
+                        strncat(processes[x].command, " ",
+                                sizeof(processes[x].command) -
+                                strlen(processes[x].command) - 1);
+                    }
+                    strncat(processes[x].command, stages[x][y].text,
+                            sizeof(processes[x].command) -
+                            strlen(processes[x].command) - 1);
+                }
                 processes[x].command[sizeof(processes[x].command)-1] = '\0';
             }
             else
@@ -643,7 +671,7 @@ static int run_pipeline(Token* tokens, int size, int sc, int bg, pid_t* f_pid, p
         tcsetpgrp(STDIN_FILENO, shell_pgid);
         if(stopped)
         {
-            int jn = add(pgid, first_pid, processes, sc);
+            int jn = add(pgid, first_pid, processes, sc, command);
             if(jn >= 0)
             {
                 stop(jn);
@@ -660,7 +688,7 @@ static int run_pipeline(Token* tokens, int size, int sc, int bg, pid_t* f_pid, p
     return 0;
 }
 
-int disperse(Token* tokens, int size, int bg)
+int disperse(Token* tokens, int size, int bg, const char* command)
 {
     pid_t first_pid = -1;
     pid_t pgid = -1;
@@ -669,14 +697,14 @@ int disperse(Token* tokens, int size, int bg)
     int sc = count_stages(tokens, size);
     if(sc > 1)
     {
-        int r = run_pipeline(tokens, size, sc, bg, &first_pid, &pgid, processes, &process_count);
+        int r = run_pipeline(tokens, size, sc, bg, &first_pid, &pgid, processes, &process_count, command);
         if(r < 0)
         {
             return r;
         }
         if(bg)
         {
-            int ji = add(pgid, first_pid, processes, process_count);
+            int ji = add(pgid, first_pid, processes, process_count, command);
             if(ji < 0)
             {
                 return 1;
@@ -708,11 +736,11 @@ int disperse(Token* tokens, int size, int bg)
         setpgid(pid, pid);
         Process proc;
         proc.pid = pid;
-        strncpy(proc.command, tokens[0].text, sizeof(proc.command)-1);
+        strncpy(proc.command, command, sizeof(proc.command)-1);
         proc.command[sizeof(proc.command)-1] = '\0';
         proc.done = 0;
         proc.status = 0;
-        int ji = add(pid, pid, &proc, 1);
+        int ji = add(pid, pid, &proc, 1, command);
         if(ji < 0)
         {
             return 1;
@@ -726,8 +754,12 @@ int disperse(Token* tokens, int size, int bg)
     }
 }
 
-int grp(Token* tokens, int size)
+int grp(Token* tokens, int size, const char* command)
 {
+    if(0)
+    {
+        printf("%s\n", command);
+    }
     Token* t = malloc(sizeof(Token)*size);
     if(t == NULL)
     {
@@ -739,7 +771,9 @@ int grp(Token* tokens, int size)
     {
         if(!strcmp(";", tokens[x].text))
         {
-            if(disperse(t, i, 0))
+            char segment_command[256];
+            make_command(t, i, segment_command, sizeof(segment_command));
+            if(disperse(t, i, 0, segment_command))
             {
                 free(t);
                 return 1;
@@ -755,7 +789,9 @@ int grp(Token* tokens, int size)
         }
         else if(!strcmp("&", tokens[x].text))
         {
-            if(disperse(t, i, 1))
+            char segment_command[256];
+            make_command(t, i, segment_command, sizeof(segment_command));
+            if(disperse(t, i, 1, segment_command))
             {
                 free(t);
                 return 1;
@@ -777,7 +813,9 @@ int grp(Token* tokens, int size)
     }
     if(i > 0)
     {
-        if(disperse(t, i, 0))
+        char segment_command[256];
+        make_command(t, i, segment_command, sizeof(segment_command));
+        if(disperse(t, i, 0, segment_command))
         {
             free(t);
             return 1;

@@ -3,6 +3,6 @@
 
 #include "token.h"
 
-void parse(Token* tokens, int size);
+void parse(Token* tokens, int size, char* s);
 
 #endif

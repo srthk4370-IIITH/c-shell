@@ -7,6 +7,7 @@
 #include "../include/cmd.h"
 #include "../include/peek.h"
 #include "../include/bg.h"
+#include "../include/resume.h"
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -76,17 +77,29 @@ int execute(char* path, char** argv)
     if(WIFSTOPPED(status))
     {
         Process process;
+        char full_command[256] = "";
+
+        for(int x = 0; argv[x] != NULL; x++)
+        {
+            if(x > 0)
+            {
+                strncat(full_command, " ",
+                        sizeof(full_command) - strlen(full_command) - 1);
+            }
+            strncat(full_command, argv[x],
+                    sizeof(full_command) - strlen(full_command) - 1);
+        }
 
         process.pid = pid;
         strncpy(
             process.command,
-            argv[0],
+            full_command,
             sizeof(process.command) - 1
         );
         process.command[sizeof(process.command) - 1] = '\0';
         process.done = 0;
         process.status = status;
-        int jn = add(pid, pid, &process, 1);
+        int jn = add(pid, pid, &process, 1, full_command);
         if(jn >= 0)
         {
             stop(jn);
@@ -249,6 +262,10 @@ int cmd(Token* tokens, int size)
         {
             return activities();
         }
+        else if(!strcmp("resume", tokens[0].text))
+        {
+            return resume(tokens, size);
+        }
         else
         {
             char* argv[size+1];
@@ -287,6 +304,14 @@ int cmd_child(Token* tokens, int size)
         else if(!strcmp("peek", tokens[0].text))
         {
             return peek(tokens, size);
+        }
+        else if(!strcmp("activities", tokens[0].text))
+        {
+            return activities();
+        }
+        else if(!strcmp("resume", tokens[0].text))
+        {
+            return resume(tokens, size);
         }
         else
         {

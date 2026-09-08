@@ -49,7 +49,7 @@ int transition(int c, TID input)
     return 0;
 }
 
-void parse(Token* tokens, int size)
+void parse(Token* tokens, int size, char* s)
 {
     if(size == 0)
     {
@@ -66,7 +66,7 @@ void parse(Token* tokens, int size)
     }
     if(c == 1 || c == 4)
     {
-        grp(tokens, size);
+        grp(tokens, size, s);
         return;
     }
     printf("cshell: Invalid Syntax\n");
