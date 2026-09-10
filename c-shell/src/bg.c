@@ -287,3 +287,34 @@ int resume_job(int jn, int bg, int timeout)
     sigprocmask(SIG_SETMASK, &oldmask, NULL);
     return 0;
 }
+
+int get_pgid(int jn)
+{
+    if(jn > job_count)
+    {
+        return -1;
+    }
+    else
+    {
+        if(jobs[jn-1].state == 1)
+        {
+            return -1;
+        }
+        return jobs[jn-1].pgid;
+    }
+}
+
+int pidExists(pid_t pid)
+{
+    for(int x=0; x<job_count; x++)
+    {
+        for(int y=0; y<jobs[x].process_count; y++)
+        {
+            if(jobs[x].processes[y].pid == pid)
+            {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}

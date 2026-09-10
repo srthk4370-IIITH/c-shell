@@ -8,6 +8,8 @@
 #include "../include/peek.h"
 #include "../include/bg.h"
 #include "../include/resume.h"
+#include "../include/ping.h"
+#include "../include/spy.h"
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -266,6 +268,14 @@ int cmd(Token* tokens, int size)
         {
             return resume(tokens, size);
         }
+        else if(!strcmp("ping", tokens[0].text))
+        {
+            return ping(tokens, size);
+        }
+        else if(!strcmp("spy", tokens[0].text))
+        {
+            return spy(tokens, size);
+        }
         else
         {
             char* argv[size+1];
@@ -312,6 +322,14 @@ int cmd_child(Token* tokens, int size)
         else if(!strcmp("resume", tokens[0].text))
         {
             return resume(tokens, size);
+        }
+        else if(!strcmp("ping", tokens[0].text))
+        {
+            return ping(tokens, size);
+        }
+        else if(!strcmp("spy", tokens[0].text))
+        {
+            return spy(tokens, size);
         }
         else
         {

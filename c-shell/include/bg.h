@@ -35,5 +35,7 @@ void stop(int job_number);
 void sighup();
 int spdJobs();
 int resume_job(int jn, int bg, int timeout);
+int get_pgid(int jn);
+int pidExists(pid_t pid);
 
 #endif

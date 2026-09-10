@@ -655,20 +655,32 @@ static int run_pipeline(Token* tokens, int size, int sc, int bg, pid_t* f_pid, p
     if(!bg)
     {
         int status;
+        int stopped = 0;
+
+        sigset_t block, oldmask;
+        sigemptyset(&block);
+        sigaddset(&block, SIGCHLD);
+        sigprocmask(SIG_BLOCK, &block, &oldmask);
+
         tcsetpgrp(STDIN_FILENO, pgid);
-        int stopped= 0;
+
         for(int x=0; x<sc; x++)
         {
             if(waitpid(pids[x], &status, WUNTRACED) < 0)
             {
                 perror("waitpid");
             }
+
             if(WIFSTOPPED(status))
             {
                 stopped = 1;
             }
         }
+
         tcsetpgrp(STDIN_FILENO, shell_pgid);
+
+        sigprocmask(SIG_SETMASK, &oldmask, NULL);
+
         if(stopped)
         {
             int jn = add(pgid, first_pid, processes, sc, command);
