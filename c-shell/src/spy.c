@@ -55,6 +55,66 @@ int spy(Token* tokens, int size)
             buffer[n] = '\0';
         }
         print(pid, "txt", "REG", buffer);
+        snprintf(path, sizeof(path), "/proc/%d/maps", pid);
+        FILE* f = fopen(path, "r");
+        if(f != NULL)
+        {
+            char line[1024];
+            while(fgets(line, 1023, f) != NULL)
+            {
+                char pathname[1024];
+                int n = sscanf(line, "%*s %*s %*s %*s %*lu %s", pathname);
+                if(n == 1)
+                {
+                    struct stat st;
+                    if(stat(pathname, &st) == 0)
+                    {
+                        if(S_ISREG(st.st_mode))
+                            print(pid, "mem", "REG", pathname);
+                        else if(S_ISDIR(st.st_mode))
+                            print(pid, "mem", "DIR", pathname);
+                        else if(S_ISCHR(st.st_mode))
+                            print(pid, "mem", "chR", pathname);
+                        else if(S_ISBLK(st.st_mode))
+                            print(pid, "mem", "BLK", pathname);
+                        else if(S_ISFIFO(st.st_mode))
+                            print(pid, "mem", "FIFO", pathname);
+                        else if(S_ISSOCK(st.st_mode))
+                            print(pid, "mem", "SOCK", pathname);
+                    }
+                }
+            }
+        }
+        snprintf(path, sizeof(path), "/proc/%d/fd", pid);
+        DIR* dir = opendir(path);
+        struct dirent *entry;
+        while((entry = readdir(dir)) != NULL)
+        {
+            char path1[1025];
+            snprintf(path1, 1024, "/proc/%d/fd/%s", pid, entry->d_name);
+            char target[PATH_MAX];
+            n = readlink(path1, target, PATH_MAX-1);
+            if(n > 0)
+            {
+                target[n] = '\0';
+                struct stat st;
+                if(stat(path1, &st) == 0)
+                {
+                    if(S_ISREG(st.st_mode))
+                        print(pid, entry->d_name, "REG", target);
+                    else if(S_ISDIR(st.st_mode))
+                        print(pid, entry->d_name, "DIR", target);
+                    else if(S_ISCHR(st.st_mode))
+                        print(pid, entry->d_name, "CHR", target);
+                    else if(S_ISBLK(st.st_mode))
+                        print(pid, entry->d_name, "BLK", target);
+                    else if(S_ISFIFO(st.st_mode))
+                        print(pid, entry->d_name, "FIFO", target);
+                    else if(S_ISSOCK(st.st_mode))
+                        print(pid, entry->d_name, "SOCK", target);
+                }
+            }
+        }
         return 0;
     }
     else

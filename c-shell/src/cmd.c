@@ -10,6 +10,7 @@
 #include "../include/resume.h"
 #include "../include/ping.h"
 #include "../include/spy.h"
+#include "../include/snoop.h"
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
@@ -276,6 +277,10 @@ int cmd(Token* tokens, int size)
         {
             return spy(tokens, size);
         }
+        else if(!strcmp("snoop", tokens[0].text))
+        {
+            return snoop(tokens, size);
+        }
         else
         {
             char* argv[size+1];
@@ -330,6 +335,10 @@ int cmd_child(Token* tokens, int size)
         else if(!strcmp("spy", tokens[0].text))
         {
             return spy(tokens, size);
+        }
+        else if(!strcmp("snoop", tokens[0].text))
+        {
+            return snoop(tokens, size);
         }
         else
         {
