@@ -218,7 +218,13 @@ int peek(Token* tokens, int size)
             }
             else
             {
-                //TODO: Implement The Stdin function
+                char buffer[1024];
+                ssize_t bytes;
+
+                while((bytes = read(STDIN_FILENO, buffer, sizeof(buffer))) > 0)
+                {
+                    write(STDOUT_FILENO, buffer, bytes);
+                }
             }
         }
     }
