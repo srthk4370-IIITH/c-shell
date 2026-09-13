@@ -66,8 +66,8 @@ int main()
             free(temp);
         }
         printf(RED"<%s@%s:"BLUE"%s> "RESET, user, hostname, cwd);
-        char s[100];
-        if(fgets(s, 99, stdin) == NULL)
+        char s[1000];
+        if(fgets(s, 999, stdin) == NULL)
         {
             if(errno == EINTR)
             {

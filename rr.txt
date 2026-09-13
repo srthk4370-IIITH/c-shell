@@ -1,0 +1,73 @@
+====================================================
+              SCHEDULER STRESS TEST
+====================================================
+START id=0 pid=4 arrival=26 totalcpu=8 type=0
+RUN id=0 pid=4 burst=8 time=26
+START id=1 pid=5 arrival=27 totalcpu=15 type=0
+RUN id=1 pid=5 burst=15 time=27
+START id=2 pid=6 arrival=28 totalcpu=30 type=0
+RUN id=2 pid=6 burst=30 time=28
+START id=3 pid=7 arrival=29 totalcpu=18 type=1
+RUN id=3 pid=7 burst=6 time=29
+START id=4 pid=8 arrival=30 totalcpu=30 type=1
+RUN id=4 pid=8 burst=10 time=30
+START id=5 pid=9 arrival=31 totalcpu=50 type=0
+RUN id=5 pid=9 burst=50 time=31
+START id=6 pid=10 arrival=32 totalcpu=80 type=0
+RUN id=6 pid=10 burst=80 time=32
+START id=7 pid=11 arrival=33 totalcpu=48 type=1
+RUN id=7 pid=11 burst=12 time=33
+START id=8 pid=12 arrival=34 totalcpu=40 type=1
+RUN id=8 pid=12 burst=20 time=34
+START id=9 pid=13 arrival=35 totalcpu=140 type=0
+RUN id=9 pid=13 burst=140 time=35
+DONE id=0 pid=4 completion=37 turnaround=11
+RESULT PID=4 ARR=25 FIRST=26 DONE=37 WAIT=11 RESP=1 TURN=12
+BLOCK id=3 pid=7 time=39
+DONE id=1 pid=5 completion=46 turnaround=19
+RESULT PID=5 ARR=25 FIRST=27 DONE=46 WAIT=19 RESP=2 TURN=21
+BLOCK id=4 pid=8 time=47
+BLOCK id=7 pid=11 time=49
+BLOCK id=8 pid=12 time=55
+DONE id=2 pid=6 completion=62 turnaround=34
+RESULT PID=6 ARR=25 FIRST=28 DONE=62 WAIT=32 RESP=3 TURN=37
+DONE id=5 pid=9 completion=82 turnaround=51
+RESULT PID=9 ARR=25 FIRST=31 DONE=82 WAIT=47 RESP=6 TURN=57
+WAKE id=3 pid=7 time=97
+RUN id=3 pid=7 burst=6 time=97
+BLOCK id=3 pid=7 time=105
+DONE id=6 pid=10 completion=114 turnaround=82
+RESULT PID=10 ARR=25 FIRST=32 DONE=114 WAIT=69 RESP=7 TURN=89
+WAKE id=4 pid=8 time=116
+RUN id=4 pid=8 burst=10 time=116
+BLOCK id=4 pid=8 time=128
+WAKE id=7 pid=11 time=136
+RUN id=7 pid=11 burst=12 time=136
+BLOCK id=7 pid=11 time=148
+WAKE id=3 pid=7 time=156
+RUN id=3 pid=7 burst=6 time=156
+DONE id=3 pid=7 completion=162 turnaround=133
+RESULT PID=7 ARR=25 FIRST=29 DONE=162 WAIT=25 RESP=4 TURN=137
+WAKE id=8 pid=12 time=176
+RUN id=8 pid=12 burst=20 time=176
+DONE id=9 pid=13 completion=177 turnaround=142
+RESULT PID=13 ARR=25 FIRST=35 DONE=177 WAIT=106 RESP=10 TURN=152
+WAKE id=4 pid=8 time=196
+RUN id=4 pid=8 burst=10 time=196
+DONE id=8 pid=12 completion=197 turnaround=163
+RESULT PID=12 ARR=25 FIRST=34 DONE=197 WAIT=39 RESP=9 TURN=172
+DONE id=4 pid=8 completion=206 turnaround=176
+RESULT PID=8 ARR=25 FIRST=30 DONE=206 WAIT=35 RESP=5 TURN=181
+WAKE id=7 pid=11 time=216
+RUN id=7 pid=11 burst=12 time=216
+BLOCK id=7 pid=11 time=228
+WAKE id=7 pid=11 time=235
+RUN id=7 pid=11 burst=12 time=235
+DONE id=7 pid=11 completion=247 turnaround=214
+RESULT PID=11 ARR=25 FIRST=33 DONE=247 WAIT=38 RESP=8 TURN=222
+
+====================================================
+              TEST COMPLETE
+TOTAL ELAPSED = 222 ticks
+====================================================
+RESULT PID=3 ARR=24 FIRST=24 DONE=247 WAIT=125 RESP=0 TURN=223
